@@ -1,10 +1,15 @@
 [versions]
+commons-compress = "1.27.1"
 download = "5.6.0"
 junit = "5.11.4"
 nexus-staging-version = "0.30.0"
+xz = "1.10"
 
 [libraries]
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+xz = { module = "org.tukaani:xz", version.ref = "xz" }
 
 [plugins]
 download = { id = "de.undercouch.download", version.ref = "download" }

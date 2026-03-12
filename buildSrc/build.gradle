@@ -1,7 +1,18 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
 repositories {
     mavenCentral()
 }
 dependencies {
-    implementation 'org.apache.commons:commons-compress:1.27.1'
-    implementation 'org.tukaani:xz:1.10'
+    implementation libs.commons.compress
+    implementation libs.xz
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+    useJUnitPlatform()
 }
