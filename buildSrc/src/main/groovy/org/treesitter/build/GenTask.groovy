@@ -31,22 +31,24 @@ package org.treesitter;
 
 import org.treesitter.utils.NativeUtils;
 
-public class $className implements TSLanguage {
+public class $className extends TSLanguage {
 
     static {
         NativeUtils.loadLib("lib/tree-sitter-$libShortName");
     }
     private native static long tree_sitter_$idName();
 
-    private final long ptr;
-
     public $className() {
-        ptr = tree_sitter_$idName();
+        super(tree_sitter_$idName());
+    }
+
+    private $className(long ptr) {
+        super(ptr);
     }
 
     @Override
-    public long getPtr() {
-        return ptr;
+    public TSLanguage copy() {
+        return new $className(copyPtr());
     }
 }
 """
@@ -63,11 +65,14 @@ public class $className implements TSLanguage {
 package org.treesitter;
 
 import org.junit.jupiter.api.Test;
+import org.treesitter.tests.CorpusTest;
+
+import java.io.IOException;
 
 class TreeSitter${capitalized}Test {
     @Test
-    void init() {
-        new TreeSitter$capitalized();
+    void corpusTest() throws IOException {
+        CorpusTest.runAllTestsInDefaultFolder(new TreeSitter$capitalized(), "$libShortName");
     }
 }
 """
@@ -86,161 +91,10 @@ class TreeSitter${capitalized}Test {
 
 
     static void genBuildGradle(File projectDir, String libShortName, String url){
-        def capitalized = capitalizedLibName(libShortName)
         def gradleFile = new File(projectDir, "build.gradle")
         def content = """
-
-import org.treesitter.build.Utils
-
-plugins {
-    id 'java'
-    id 'signing'
-    id 'maven-publish'
-}
-
-group = 'io.github.bonede'
-version = libVersion
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation platform(libs.junit.bom)
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    implementation project(":tree-sitter")
-}
-
-test {
-    useJUnitPlatform()
-}
-def libName = "tree-sitter-$libShortName"
-
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "MavenCentral"
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl =  "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-            credentials {
-                username = ossrhUsername
-                password = ossrhPassword
-            }
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-        }
-    }
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            pom {
-                name = libName
-                url = 'https://github.com/bonede/tree-sitter-ng'
-                description = "Next generation Tree Sitter Java binding"
-                licenses {
-                    license {
-                        name = 'MIT'
-                    }
-                }
-                scm {
-                    connection = 'scm:git:https://github.com/bonede/tree-sitter-ng.git'
-                    developerConnection = 'scm:git:https://github.com/bonede/tree-sitter-ng.git'
-                    url = 'https://github.com/bonede/tree-sitter-ng'
-                }
-                developers {
-                    developer {
-                        id = 'bonede'
-                        name = 'Wang Liang'
-                        email = 'bonede@qq.com'
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-signing {
-    sign configurations.archives
-    sign publishing.publications
-}
-tasks.register('downloadSource') {
-    group = "build setup"
-    description = "Download parser source"
-    def zipUrl = "$url"
-    def downloadDir = Utils.libDownloadDir(project, libName)
-    def zip = Utils.libZipFile(project, libName, libVersion)
-    def parserCFile = Utils.libParserCFile(project, libName, libVersion)
-    inputs.files(layout.projectDirectory.file("gradle.properties"))
-    outputs.files(parserCFile)
-    doLast {
-        download.run {
-            src zipUrl
-            dest zip
-            overwrite false
-        }
-        copy {
-            from zipTree(zip)
-            into downloadDir
-        }
-    }
-
-}
-
-tasks.register("buildNative") {
-    group = "build"
-    description = "Build parser native modules"
-    dependsOn "downloadSource", rootProject.bootstrap
-    def jniSrcDir = Utils.jniSrcDir(project)
-    def outDir = Utils.jniOutDir(project)
-    def jniCFile = Utils.jniCFile(project, "org_treesitter_TreeSitter${capitalized}.c")
-    def parserCFile = Utils.libParserCFile(project, libName, libVersion)
-    def scannerCFile = Utils.libScannerCFile(project, libName, libVersion)
-    def libSrcDir = Utils.libSrcDir(project, libName, libVersion)
-    def jniInclude = Utils.jniIncludeDir(project)
-
-    def targets = Utils.treeSitterTargets(project)
-    def outputFiles = targets.collect()
-            { t -> Utils.jniOutFile(project, t, libName)}
-    def srcFiles = project.fileTree(libSrcDir) {
-        include(Utils.libFiles())
-    }.toList()
-    outputs.files(outputFiles)
-    def inputFiles = srcFiles + [parserCFile, rootProject.layout.projectDirectory.file("gradle.properties")]
-    inputs.files(inputFiles)
-    doLast{
-        mkdir(outDir)
-        targets.each {target ->
-            def jniMdInclude = Utils.jniMdInclude(project, target)
-            def jniOutFile = Utils.jniOutFile(project, target, libName)
-            def files = project.fileTree(libSrcDir) {
-                include(Utils.libFiles())
-            }.toList()
-            def cmd = [
-                        rootProject.downloadZig.zigExe, "c++",
-                        "-g0",
-                        "-shared",
-                        "-target", target,
-                        "-I", libSrcDir,
-                        "-I", jniInclude,
-                        "-I", jniMdInclude,
-                        "-o", jniOutFile,
-                        jniCFile,
-            ]
-
-            cmd.addAll(files)
-            exec{
-                workingDir jniSrcDir
-                commandLine(cmd)
-            }
-        }
-        Utils.removeWindowsDebugFiles(project)
-    }
+tasks.named('downloadSource') {
+    url = "$url"
 }
 """
         try (OutputStream outputStream = new FileOutputStream(gradleFile)){
