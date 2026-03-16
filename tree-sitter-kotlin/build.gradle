@@ -1,0 +1,4 @@
+
+tasks.named('downloadSource') {
+    url = "https://github.com/fwcd/tree-sitter-kotlin/archive/refs/tags/0.3.8.zip"
+}
