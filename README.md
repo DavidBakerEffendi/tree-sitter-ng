@@ -65,6 +65,29 @@ class Main {
 - x86_64-linux
 - aarch64-linux
 
+# Developers: How to Add a Parser
+
+To add a new language parser to this project, we provide a code generation task that handles most of the boilerplate.
+
+1. **Generate the subproject:**
+   Run the `gen` task, providing the language name, its version, and the URL to its source code zip file.
+   ```bash
+   ./gradlew gen -PlibName=some_lang -PlibVersion=0.20.0 -Purl=https://github.com/tree-sitter/tree-sitter-some_lang/archive/refs/tags/v0.20.0.zip
+   ```
+   This will create a new directory `tree-sitter-some_lang` with the correct `build.gradle`, `gradle.properties`, JNI bindings, and Java class extending `TSLanguage`.
+
+2. **Include the subproject:**
+   Add the new module to `settings.gradle`:
+   ```groovy
+   include 'tree-sitter-some_lang'
+   ```
+
+3. **Build native modules and test:**
+   Our build system automatically uses Zig to cross-compile the native shared libraries for the new parser. You can trigger the download, native compilation, and tests all at once:
+   ```bash
+   ./gradlew :tree-sitter-some_lang:test
+   ```
+
 # Built-in official parsers
 | Name                            | Version                                                                                                 |
 |---------------------------------|---------------------------------------------------------------------------------------------------------|
