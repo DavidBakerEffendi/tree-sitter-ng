@@ -144,7 +144,7 @@ JNIEXPORT jlong JNICALL Java_org_treesitter_TreeSitter${capitalized}_tree_1sitte
         }
         if(shouldUpdate){
             try(OutputStream outputStream = new FileOutputStream(settingsFile, true)){
-                outputStream.withPrintWriter {writer -> writer.println(projectLine)}
+                outputStream.withPrintWriter {writer -> writer.println(System.lineSeparator() + projectLine)}
             }
         }
     }

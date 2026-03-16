@@ -67,25 +67,20 @@ class Main {
 
 # Developers: How to Add a Parser
 
-To add a new language parser to this project, we provide a code generation task that handles most of the boilerplate.
+To add a new language parser to this project, we provide a code generation task that handles most of the boilerplate. This is also how you can add an "unofficial" or community parser.
 
 1. **Generate the subproject:**
-   Run the `gen` task, providing the language name, its version, and the URL to its source code zip file.
+   Run the `gen` task, providing the language name (in this example, Kotlin), its version, and the URL to its source code zip file.
    ```bash
-   ./gradlew gen -PlibName=some_lang -PlibVersion=0.20.0 -Purl=https://github.com/tree-sitter/tree-sitter-some_lang/archive/refs/tags/v0.20.0.zip
+   ./gradlew gen --parser-name=kotlin --parser-version=0.3.8 --parser-zip=https://github.com/fwcd/tree-sitter-kotlin/archive/refs/tags/0.3.8.zip
    ```
-   This will create a new directory `tree-sitter-some_lang` with the correct `build.gradle`, `gradle.properties`, JNI bindings, and Java class extending `TSLanguage`.
+   This will create a new directory `tree-sitter-kotlin` with the correct `build.gradle`, `gradle.properties`, JNI bindings, and Java class extending `TSLanguage`. Finally, an entry of `include 'tree-sitter-kotlin'` will be inserted into `settings.gradle`.
 
-2. **Include the subproject:**
-   Add the new module to `settings.gradle`:
-   ```groovy
-   include 'tree-sitter-some_lang'
-   ```
-
-3. **Build native modules and test:**
-   Our build system automatically uses Zig to cross-compile the native shared libraries for the new parser. You can trigger the download, native compilation, and tests all at once:
+2. **Build native modules and test:**
+   Our build system automatically uses Zig to cross-compile the native shared libraries for the new parser. You can trigger the download, native compilation, and tests:
    ```bash
-   ./gradlew :tree-sitter-some_lang:test
+   ./gradlew :tree-sitter-kotlin:buildNative
+   ./gradlew :tree-sitter-kotlin:test
    ```
 
 # Built-in official parsers
