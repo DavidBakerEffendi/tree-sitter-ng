@@ -6,6 +6,7 @@ import org.treesitter.tests.CorpusTest;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TreeSitterRustTest {
@@ -65,16 +66,84 @@ class TreeSitterRustTest {
     }
 
     @Test
-    void testIntegrationQueryNotEq() {
+    void testIntegrationQueryNotEqShouldNotMatch() {
         TSParser parser = new TSParser();
         parser.setLanguage(new TreeSitterRust());
-        // Note: Corrected snippet from prompt (removed extra ')')
+
+        String source = "#[derive(Other)] \n" +
+                "pub enum Status {\n" +
+                "  Running,\n" +
+                "  Stopped,\n" +
+                "  Initial,\n" +
+                "}";
+
+        TSTree tree = parser.parseString(null, source);
+        TSNode rootNode = tree.getRootNode();
+
+        String queryString = "(attribute_item\n" +
+                "  (attribute\n" +
+                "    (identifier) @_derive\n" +
+                "    (#not-eq? @_derive \"derive\")\n" +
+                "    (token_tree\n" +
+                "      (identifier) @macro.derive.name\n" +
+                "    )\n" +
+                "  )\n" +
+                ") @macro.derive";
+
+        TSQuery query = new TSQuery(parser.getLanguage(), queryString);
+        TSQueryCursor cursor = new TSQueryCursor();
+        cursor.exec(query, rootNode, source);
+
+        TSQueryMatch match = new TSQueryMatch();
+        assertFalse(cursor.nextMatch(match), "Query should not match because #not-eq? predicate fails");
+    }
+
+    @Test
+    void testIntegrationQueryEqShouldNotMatch() {
+        TSParser parser = new TSParser();
+        parser.setLanguage(new TreeSitterRust());
+
+        String source = "#[foo(Other)] \n" +
+                "pub enum Status {\n" +
+                "  Running,\n" +
+                "  Stopped,\n" +
+                "  Initial,\n" +
+                "}";
+
+        TSTree tree = parser.parseString(null, source);
+        TSNode rootNode = tree.getRootNode();
+
+        String queryString = "(attribute_item\n" +
+                "  (attribute\n" +
+                "    (identifier) @_derive\n" +
+                "    (#eq? @_derive \"derive\")\n" +
+                "    (token_tree\n" +
+                "      (identifier) @macro.derive.name\n" +
+                "    )\n" +
+                "  )\n" +
+                ") @macro.derive";
+
+        TSQuery query = new TSQuery(parser.getLanguage(), queryString);
+        TSQueryCursor cursor = new TSQueryCursor();
+        cursor.exec(query, rootNode, source);
+
+        TSQueryMatch match = new TSQueryMatch();
+        assertFalse(cursor.nextMatch(match), "Query should not match because #eq? predicate fails");
+    }
+
+
+    @Test
+    void testIntegrationQueryNotEqShouldMatch() {
+        TSParser parser = new TSParser();
+        parser.setLanguage(new TreeSitterRust());
+
         String source = "#[is_macro::Is]\n" +
                 "pub enum Status {\n" +
                 "  Running,\n" +
                 "  Stopped,\n" +
                 "  Initial,\n" +
                 "}";
+
         TSTree tree = parser.parseString(null, source);
         TSNode rootNode = tree.getRootNode();
 
