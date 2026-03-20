@@ -129,4 +129,21 @@ class TSQueryPredicateTest {
         assertTrue(cursor.nextMatch(match), "Should match '世界' using partial regex");
         assertFalse(cursor.nextMatch(match));
     }
+
+    @Test
+    void testMissingSourceBytesThrowsException() {
+        // [1, null]
+        // Use a simple query that matches something but doesn't have its own predicates
+        query = new TSQuery(json, "((number) @val)");
+        cursor.exec(query, rootNode, JSON_SRC);
+        TSQueryMatch match = new TSQueryMatch();
+        assertTrue(cursor.nextMatch(match));
+
+        // Manually create a predicate to test the exception throwing behavior.
+        // Capture index 0 is '@val' from the query above.
+        TSQueryPredicate predicate = new TSQueryPredicate.TSQueryPredicateEq("eq?", 0, "1", -1, false);
+
+        // Attempting to test predicates with null sourceBytes should throw IllegalStateException
+        assertThrows(IllegalStateException.class, () -> predicate.test(match, (byte[]) null));
+    }
 }

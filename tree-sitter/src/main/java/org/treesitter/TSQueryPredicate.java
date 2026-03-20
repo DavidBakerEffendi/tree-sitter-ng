@@ -41,12 +41,12 @@ public abstract class TSQueryPredicate {
      */
     public boolean test(TSQueryMatch match, byte[] sourceBytes) {
         return test(match, n -> {
-            if (n == null || n.isNull() || sourceBytes == null) return "";
+            if (n == null || n.isNull()) return "";
+            if (sourceBytes == null || n.getStartByte() < 0 || n.getStartByte() > n.getEndByte() || n.getStartByte() >= sourceBytes.length) {
+                throw new IllegalStateException("Source bytes are required to evaluate text-based predicates");
+            }
             int start = n.getStartByte();
             int end = n.getEndByte();
-            if (start < 0 || start > end || start >= sourceBytes.length) {
-                return "";
-            }
             int length = Math.min(end, sourceBytes.length) - start;
             return new String(sourceBytes, start, length, java.nio.charset.StandardCharsets.UTF_8);
         });
