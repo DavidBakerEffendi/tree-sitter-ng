@@ -45,16 +45,72 @@ class TreeSitterRustTest {
         assertTrue(cursor.nextMatch(match), "Query should have matched");
 
         boolean foundMacroDerive = false;
+        boolean foundDeriveName = false;
         for (TSQueryCapture capture : match.getCaptures()) {
             String captureName = query.getCaptureNameForId(capture.getIndex());
+            TSNode node = capture.getNode();
+            String matchedText = source.substring(node.getStartByte(), node.getEndByte());
+
             if ("macro.derive".equals(captureName)) {
                 foundMacroDerive = true;
-                TSNode node = capture.getNode();
-                String matchedText = source.substring(node.getStartByte(), node.getEndByte());
-                assertTrue(matchedText.contains("#[derive(Is)]"), 
+                assertTrue(matchedText.contains("#[derive(Is)]"),
                     "Matched text should contain the attribute. Found: " + matchedText);
+            } else if ("macro.derive.name".equals(captureName)) {
+                foundDeriveName = true;
+                assertEquals("Is", matchedText, "macro.derive.name should match 'Is'");
             }
         }
         assertTrue(foundMacroDerive, "Should have found @macro.derive capture");
+        assertTrue(foundDeriveName, "Should have found @macro.derive.name capture");
+    }
+
+    @Test
+    void testIntegrationQueryNotEq() {
+        TSParser parser = new TSParser();
+        parser.setLanguage(new TreeSitterRust());
+        // Note: Corrected snippet from prompt (removed extra ')')
+        String source = "#[is_macro::Is]\n" +
+                "pub enum Status {\n" +
+                "  Running,\n" +
+                "  Stopped,\n" +
+                "  Initial,\n" +
+                "}";
+        TSTree tree = parser.parseString(null, source);
+        TSNode rootNode = tree.getRootNode();
+
+        String queryString = "(attribute_item\n" +
+                "  (attribute\n" +
+                "    [\n" +
+                "      ((identifier) @macro.attribute.name\n" +
+                "        (#not-eq? @macro.attribute.name \"derive\"))\n" +
+                "      (scoped_identifier) @macro.attribute.name\n" +
+                "    ]\n" +
+                "  )\n" +
+                ") @macro.attribute";
+
+        TSQuery query = new TSQuery(parser.getLanguage(), queryString);
+        TSQueryCursor cursor = new TSQueryCursor();
+        cursor.exec(query, rootNode, source);
+
+        TSQueryMatch match = new TSQueryMatch();
+        assertTrue(cursor.nextMatch(match), "Query should have matched is_macro::Is");
+
+        boolean foundAttribute = false;
+        boolean foundName = false;
+        for (TSQueryCapture capture : match.getCaptures()) {
+            String captureName = query.getCaptureNameForId(capture.getIndex());
+            TSNode node = capture.getNode();
+            String matchedText = source.substring(node.getStartByte(), node.getEndByte());
+
+            if ("macro.attribute".equals(captureName)) {
+                foundAttribute = true;
+                assertTrue(matchedText.contains("#[is_macro::Is]"));
+            } else if ("macro.attribute.name".equals(captureName)) {
+                foundName = true;
+                assertEquals("is_macro::Is", matchedText);
+            }
+        }
+        assertTrue(foundAttribute, "Should have found @macro.attribute capture");
+        assertTrue(foundName, "Should have found @macro.attribute.name capture");
     }
 }
